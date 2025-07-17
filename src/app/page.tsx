@@ -10,6 +10,8 @@ interface ProcessingConfig {
     B: string;
     C: string;
   };
+  use_auto_distribution: boolean;
+  total_table_width: string;
 }
 
 interface ApiResponse {
@@ -26,7 +28,9 @@ export default function Home() {
       A: '4.0',
       B: '4.0',
       C: '2.0'
-    }
+    },
+    use_auto_distribution: false,
+    total_table_width: '15.6'
   });
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ApiResponse | null>(null);
@@ -51,6 +55,9 @@ export default function Home() {
     formData.append('file', file);
     formData.append('excluded_columns', JSON.stringify(config.excluded_columns));
     formData.append('column_widths', JSON.stringify(config.column_widths));
+    if (config.use_auto_distribution) {
+      formData.append('total_table_width', config.total_table_width);
+    }
 
     try {
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -177,55 +184,101 @@ export default function Home() {
 
                   <div>
                     <label className="block text-sm font-medium text-purple-300 mb-3">
-                      Column Widths
+                      Column Widths {config.use_auto_distribution && '(Disabled in Auto Mode)'}
                     </label>
                     <div className="space-y-4">
                       <div>
-                        <label className="block text-xs text-gray-300 mb-2">Column A width</label>
+                        <label className="block text-xs text-gray-300 mb-2">Column A width (cm)</label>
                         <input
                           type="number"
                           step="0.1"
                           min="1"
                           max="10"
                           value={config.column_widths.A}
+                          disabled={config.use_auto_distribution}
                           onChange={(e) => setConfig(prev => ({
                             ...prev,
                             column_widths: { ...prev.column_widths, A: e.target.value }
                           }))}
-                          className="w-full rounded-lg border-slate-600/50 bg-slate-800/50 text-white shadow-sm focus:border-purple-500 focus:ring-purple-500 backdrop-blur-sm transition-all duration-200 hover:bg-slate-700/50"
+                          className="w-full rounded-lg border-slate-600/50 bg-slate-800/50 text-white shadow-sm focus:border-purple-500 focus:ring-purple-500 backdrop-blur-sm transition-all duration-200 hover:bg-slate-700/50 disabled:opacity-50 disabled:cursor-not-allowed"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-gray-300 mb-2">Column B width</label>
+                        <label className="block text-xs text-gray-300 mb-2">Column B width (cm)</label>
                         <input
                           type="number"
                           step="0.1"
                           min="1"
                           max="10"
                           value={config.column_widths.B}
+                          disabled={config.use_auto_distribution}
                           onChange={(e) => setConfig(prev => ({
                             ...prev,
                             column_widths: { ...prev.column_widths, B: e.target.value }
                           }))}
-                          className="w-full rounded-lg border-slate-600/50 bg-slate-800/50 text-white shadow-sm focus:border-purple-500 focus:ring-purple-500 backdrop-blur-sm transition-all duration-200 hover:bg-slate-700/50"
+                          className="w-full rounded-lg border-slate-600/50 bg-slate-800/50 text-white shadow-sm focus:border-purple-500 focus:ring-purple-500 backdrop-blur-sm transition-all duration-200 hover:bg-slate-700/50 disabled:opacity-50 disabled:cursor-not-allowed"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-gray-300 mb-2">Columns C-I width</label>
+                        <label className="block text-xs text-gray-300 mb-2">Columns C-I width (cm)</label>
                         <input
                           type="number"
                           step="0.1"
                           min="1"
                           max="10"
                           value={config.column_widths.C}
+                          disabled={config.use_auto_distribution}
                           onChange={(e) => setConfig(prev => ({
                             ...prev,
                             column_widths: { ...prev.column_widths, C: e.target.value }
                           }))}
-                          className="w-full rounded-lg border-slate-600/50 bg-slate-800/50 text-white shadow-sm focus:border-purple-500 focus:ring-purple-500 backdrop-blur-sm transition-all duration-200 hover:bg-slate-700/50"
+                          className="w-full rounded-lg border-slate-600/50 bg-slate-800/50 text-white shadow-sm focus:border-purple-500 focus:ring-purple-500 backdrop-blur-sm transition-all duration-200 hover:bg-slate-700/50 disabled:opacity-50 disabled:cursor-not-allowed"
                         />
                       </div>
                     </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-purple-300 mb-3">
+                      Width Distribution Mode
+                    </label>
+                    <div className="flex items-center space-x-2 mb-4">
+                      <input
+                        type="checkbox"
+                        id="use-auto-distribution"
+                        checked={config.use_auto_distribution}
+                        onChange={(e) => setConfig(prev => ({
+                          ...prev,
+                          use_auto_distribution: e.target.checked
+                        }))}
+                        className="rounded border-purple-600 text-purple-600 focus:ring-purple-500 bg-slate-700/50"
+                      />
+                      <label htmlFor="use-auto-distribution" className="text-sm text-gray-300">
+                        Use auto-distribution
+                      </label>
+                    </div>
+                    {config.use_auto_distribution && (
+                      <div className="bg-purple-500/10 p-4 rounded-lg border border-purple-500/20">
+                        <p className="text-xs text-purple-200 mb-3">
+                          Auto-distribution maintains a 2:1 ratio (A & B columns get double width of others)
+                        </p>
+                        <label className="block text-sm font-medium text-purple-300 mb-2">
+                          Total Table Width (cm)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="5"
+                          max="30"
+                          value={config.total_table_width}
+                          onChange={(e) => setConfig(prev => ({
+                            ...prev,
+                            total_table_width: e.target.value
+                          }))}
+                          className="w-full rounded-lg border-slate-600/50 bg-slate-800/50 text-white shadow-sm focus:border-purple-500 focus:ring-purple-500 backdrop-blur-sm transition-all duration-200 hover:bg-slate-700/50"
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

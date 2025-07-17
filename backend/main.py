@@ -14,10 +14,10 @@ from latex_generator import LatexGenerator
 
 app = FastAPI(title="LOD Matrix LaTeX Generator", version="1.0.0")
 
-# Enable CORS for production
+# Enable CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure for production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -30,6 +30,7 @@ class ProcessingConfig(BaseModel):
         "B": "4.0", 
         "C": "2.0"
     }
+    total_table_width: Optional[float] = None
 
 @app.get("/")
 async def root():
@@ -39,17 +40,28 @@ async def root():
 async def generate_latex(
     file: UploadFile = File(...),
     excluded_columns: str = Form('["B", "C", "D", "E"]'),
-    column_widths: str = Form('{"A": "4.0", "B": "4.0", "C": "2.0"}')
+    column_widths: str = Form('{"A": "4.0", "B": "4.0", "C": "2.0"}'),
+    total_table_width: Optional[str] = Form(None)
 ):
     try:
-        # Parse the configuration
         excluded = json.loads(excluded_columns)
         widths = json.loads(column_widths)
         
+        total_width = None
+        if total_table_width and total_table_width.strip():
+            try:
+                total_width = float(total_table_width.strip())
+            except ValueError:
+                raise HTTPException(status_code=400, detail="total_table_width must be a valid number")
+        
         print(f"Processing with excluded columns: {excluded}")
         print(f"Processing with column widths: {widths}")
+        if total_width:
+            print(f"Using auto-distribution with total width: {total_width}cm")
+        else:
+            print("Using manual column widths")
         
-        if not file.filename.endswith(('.xlsx', '.xls')):
+        if not file.filename or not file.filename.endswith(('.xlsx', '.xls')):
             raise HTTPException(status_code=400, detail="Please upload a valid Excel file")
         
         content = await file.read()
@@ -59,6 +71,10 @@ async def generate_latex(
             "excluded_columns": excluded,
             "column_widths": widths
         }
+        
+        # Add total_table_width if provided (for auto-distribution)
+        if total_width is not None:
+            config["total_table_width"] = total_width
         
         latex_files = generator.process_excel(content, config)
         print(f"Generated {len(latex_files)} files")

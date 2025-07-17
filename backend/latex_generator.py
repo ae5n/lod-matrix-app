@@ -47,24 +47,70 @@ class LatexGenerator:
         return ord(letter.upper()) - ord("A")
 
     def process_worksheet(self, ws, sheet_name: str, config: Dict[str, Any]) -> str:
-        """Process a single worksheet and generate LaTeX table."""
+        """
+        Process a single worksheet and generate LaTeX table.
+        
+        Supports two column width modes:
+        
+        1. **Manual Mode** (default):
+           - Use config['column_widths'] to specify individual column widths
+           - Example: {"A": "4.0", "B": "4.0", "C": "2.0"}
+           
+        2. **Auto-Distribution Mode**:
+           - Use config['total_table_width'] to specify total table width
+           - System automatically distributes width among included columns
+           - Maintains 2:1 ratio (A/B columns get double width of others)
+           - Example: {"total_table_width": 15.6}
+           
+        Args:
+            ws: Excel worksheet object
+            sheet_name: Name of the worksheet
+            config: Configuration dictionary with options:
+                - excluded_columns: List of column letters to exclude (default: ["B", "C", "D", "E"])
+                - column_widths: Manual column widths (used if total_table_width not provided)
+                - total_table_width: Total width for auto-distribution (overrides manual widths)
+        
+        Returns:
+            LaTeX table string
+        """
         excluded_columns = set(config.get('excluded_columns', ["B", "C", "D", "E"]))
         
-# Build column widths from config
-        widths = config.get('column_widths', {})
-        COLUMN_WIDTHS = {
-            "A": f"m{{{widths.get('A', '4.0')}cm}}",
-            "B": f"m{{{widths.get('B', '4.0')}cm}}",
-            "C": f">{{\\centering\\arraybackslash}}m{{{widths.get('C', '2.0')}cm}}",
-        }
-
-        excluded_indices = set(self.col_letter_to_index(c) for c in excluded_columns)
-
-        header_title = self.escape_latex(ws["A1"].value) if ws["A1"].value else "Table"
+        total_table_width = config.get('total_table_width')
+        use_auto_distribution = total_table_width is not None
         
         all_letters = ["A", "B", "C", "D", "E", "F", "G", "H", "I"]
         final_letters = [l for l in all_letters if l not in excluded_columns]
         final_indices = [self.col_letter_to_index(l) for l in final_letters]
+        
+        if use_auto_distribution:
+            total_width = float(total_table_width) if total_table_width else 15.6
+            
+            n_AB = len([l for l in final_letters if l in {"A", "B"}])
+            n_others = len([l for l in final_letters if l not in {"A", "B"}])
+            
+            # Auto-distribution formula: w_others = total / (2 * n_AB + n_others)
+            if (2 * n_AB + n_others) > 0:
+                w_others = total_width / (2 * n_AB + n_others)
+                w_AB = 2 * w_others
+            else:
+                w_others = w_AB = total_width / len(final_letters) if final_letters else 1.0
+            
+            COLUMN_WIDTHS = {}
+            for letter in final_letters:
+                if letter in {"A", "B"}:
+                    COLUMN_WIDTHS[letter] = f"m{{{w_AB:.2f}cm}}"
+                else:
+                    COLUMN_WIDTHS[letter] = f">{{\\centering\\arraybackslash}}m{{{w_others:.2f}cm}}"
+        else:
+            widths = config.get('column_widths', {})
+            COLUMN_WIDTHS = {
+                "A": f"m{{{widths.get('A', '4.0')}cm}}",
+                "B": f"m{{{widths.get('B', '4.0')}cm}}",
+                "C": f">{{\\centering\\arraybackslash}}m{{{widths.get('C', '2.0')}cm}}",
+            }
+
+        excluded_indices = set(self.col_letter_to_index(c) for c in excluded_columns)
+        header_title = self.escape_latex(ws["A1"].value) if ws["A1"].value else "Table"
 
         headers = []
         for letter in final_letters:
@@ -74,20 +120,32 @@ class LatexGenerator:
 
         total_width = 0.0
         for l in final_letters:
-            if l in {"A", "B"}:
-                width_value = widths.get(l, '4.0')
+            if use_auto_distribution:
+                width_str = COLUMN_WIDTHS[l]
+                import re
+                width_match = re.search(r'm\{([\d.]+)cm\}', width_str)
+                if width_match:
+                    width_value = width_match.group(1)
+                else:
+                    width_value = '2.0'
             else:
-                width_value = widths.get('C', '2.0')
+                if l in {"A", "B"}:
+                    width_value = widths.get(l, '4.0')
+                else:
+                    width_value = widths.get('C', '2.0')
             total_width += float(width_value)
         
-        total_width_str = f"{total_width}cm"
+        total_width_str = f"{total_width:.2f}cm"
 
         tabular_parts = []
         for l in final_letters:
-            if l in {"A", "B"}:
+            if use_auto_distribution:
                 tabular_parts.append(COLUMN_WIDTHS[l])
             else:
-                tabular_parts.append(COLUMN_WIDTHS["C"])
+                if l in {"A", "B"}:
+                    tabular_parts.append(COLUMN_WIDTHS[l])
+                else:
+                    tabular_parts.append(COLUMN_WIDTHS["C"])
         tabular_spec = "|" + "|".join(tabular_parts) + "|"
 
         color_definition = """% Add these packages to your LaTeX document preamble:
