@@ -72,6 +72,16 @@ class LatexGenerator:
             header_value = ws[cell_ref].value if ws[cell_ref].value else f"Column {letter}"
             headers.append(self.escape_latex(header_value))
 
+        total_width = 0.0
+        for l in final_letters:
+            if l in {"A", "B"}:
+                width_value = widths.get(l, '4.0')
+            else:
+                width_value = widths.get('C', '2.0')
+            total_width += float(width_value)
+        
+        total_width_str = f"{total_width}cm"
+
         tabular_parts = []
         for l in final_letters:
             if l in {"A", "B"}:
@@ -92,14 +102,14 @@ class LatexGenerator:
 \\scriptsize
 \\begin{{longtable}}{{{tabular_spec}}}
 \\hline
-\\rowcolor{{headercolor}}\\multicolumn{{{len(final_letters)}}}{{|c|}}{{\\parbox[c][4ex][c]{{\\linewidth}}{{\\centering\\textcolor{{white}}{{\\textbf{{\\normalsize{{{header_title}}}}}}}}}}} \\\\
+\\rowcolor{{headercolor}}\\multicolumn{{{len(final_letters)}}}{{|c|}}{{\\parbox[c][4ex][c]{{{total_width_str}}}{{\\centering\\textcolor{{white}}{{\\textbf{{\\normalsize{{{header_title}}}}}}}}}}} \\\\
 \\hline
 \\rowcolor{{headercolor}}{" & ".join([f"\\textcolor{{white}}{{\\textbf{{{header}}}}}" for header in headers])} \\\\
 \\hline
 \\endfirsthead
 
 \\hline
-\\rowcolor{{headercolor}}\\multicolumn{{{len(final_letters)}}}{{|c|}}{{\\parbox[c][4ex][c]{{\\linewidth}}{{\\centering\\textcolor{{white}}{{\\textbf{{\\normalsize{{{header_title}}} (continued)}}}}}}}} \\\\
+\\rowcolor{{headercolor}}\\multicolumn{{{len(final_letters)}}}{{|c|}}{{\\parbox[c][4ex][c]{{{total_width_str}}}{{\\centering\\textcolor{{white}}{{\\textbf{{\\normalsize{{{header_title}}} (continued)}}}}}}}} \\\\
 \\hline
 \\rowcolor{{headercolor}}{" & ".join([f"\\textcolor{{white}}{{\\textbf{{{header}}}}}" for header in headers])} \\\\
 \\hline
