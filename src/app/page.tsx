@@ -53,7 +53,7 @@ export default function Home() {
     formData.append('column_widths', JSON.stringify(config.column_widths));
 
     try {
-      const response = await fetch('http://localhost:8000/api/generate-latex', {
+      const response = await fetch(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/generate-latex', {
         method: 'POST',
         body: formData,
       });
@@ -93,7 +93,7 @@ export default function Home() {
     if (!result) return;
 
     try {
-      const response = await fetch('http://localhost:8000/api/download-zip', {
+      const response = await fetch(process.env.NEXT_PUBLIC_API_URL ? `${process.env.NEXT_PUBLIC_API_URL.replace('/api/generate-latex', '')}/api/download-zip` : 'http://localhost:8000/api/download-zip', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

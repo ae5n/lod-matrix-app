@@ -14,10 +14,10 @@ from latex_generator import LatexGenerator
 
 app = FastAPI(title="LOD Matrix LaTeX Generator", version="1.0.0")
 
-# Enable CORS for Next.js frontend
+# Enable CORS for production
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["*"],  # Configure for production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
