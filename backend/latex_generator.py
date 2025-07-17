@@ -54,12 +54,12 @@ class LatexGenerator:
         
         1. **Manual Mode** (default):
            - Use config['column_widths'] to specify individual column widths
-           - Example: {"A": "4.0", "B": "4.0", "C": "2.0"}
+           - Example: {"A": "6.7", "B": "4.0", "C": "2.0"}
            
         2. **Auto-Distribution Mode**:
            - Use config['total_table_width'] to specify total table width
            - System automatically distributes width among included columns
-           - Maintains 2:1 ratio (A/B columns get double width of others)
+           - Maintains 3:1 ratio (A/B columns get triple width of others)
            - Example: {"total_table_width": 15.6}
            
         Args:
@@ -69,6 +69,7 @@ class LatexGenerator:
                 - excluded_columns: List of column letters to exclude (default: ["B", "C", "D", "E"])
                 - column_widths: Manual column widths (used if total_table_width not provided)
                 - total_table_width: Total width for auto-distribution (overrides manual widths)
+                - font_size: LaTeX font size command ('footnotesize' or 'scriptsize', default: 'footnotesize')
         
         Returns:
             LaTeX table string
@@ -88,10 +89,10 @@ class LatexGenerator:
             n_AB = len([l for l in final_letters if l in {"A", "B"}])
             n_others = len([l for l in final_letters if l not in {"A", "B"}])
             
-            # Auto-distribution formula: w_others = total / (2 * n_AB + n_others)
-            if (2 * n_AB + n_others) > 0:
-                w_others = total_width / (2 * n_AB + n_others)
-                w_AB = 2 * w_others
+            # Auto-distribution formula with 3:1 ratio: w_others = total / (3 * n_AB + n_others)
+            if (3 * n_AB + n_others) > 0:
+                w_others = total_width / (3 * n_AB + n_others)
+                w_AB = 3 * w_others
             else:
                 w_others = w_AB = total_width / len(final_letters) if final_letters else 1.0
             
@@ -104,7 +105,7 @@ class LatexGenerator:
         else:
             widths = config.get('column_widths', {})
             COLUMN_WIDTHS = {
-                "A": f"m{{{widths.get('A', '4.0')}cm}}",
+                "A": f"m{{{widths.get('A', '6.7')}cm}}",
                 "B": f"m{{{widths.get('B', '4.0')}cm}}",
                 "C": f">{{\\centering\\arraybackslash}}m{{{widths.get('C', '2.0')}cm}}",
             }
@@ -156,8 +157,11 @@ class LatexGenerator:
 \\definecolor{headercolor}{HTML}{00ACD2}
 """
 
+        # Get font size from config (default: footnotesize)
+        font_size = config.get('font_size', 'footnotesize')
+        
         header_latex = f"""
-\\scriptsize
+\\{font_size}
 \\begin{{longtable}}{{{tabular_spec}}}
 \\hline
 \\rowcolor{{headercolor}}\\multicolumn{{{len(final_letters)}}}{{|c|}}{{\\parbox[c][4ex][c]{{{total_width_str}}}{{\\centering\\textcolor{{white}}{{\\textbf{{\\normalsize{{{header_title}}}}}}}}}}} \\\\
@@ -221,19 +225,14 @@ class LatexGenerator:
         
         try:
             wb = load_workbook(filename=io.BytesIO(excel_content))
-            print(f"Found {len(wb.sheetnames)} worksheets: {wb.sheetnames}")
             
             for sheet_name in wb.sheetnames:
                 ws = wb[sheet_name]
-                print(f"Processing worksheet: {sheet_name}")
                 latex_content = self.process_worksheet(ws, sheet_name, config)
-                print(f"Generated LaTeX content length: {len(latex_content)}")
                 filename = f"{self.sanitize_filename(sheet_name)}.tex"
                 latex_files[filename] = latex_content
                 
-            print(f"Successfully processed {len(latex_files)} worksheets")
             return latex_files
             
         except Exception as e:
-            print(f"Error processing Excel file: {str(e)}")
             raise Exception(f"Error processing Excel file: {str(e)}")

@@ -12,6 +12,7 @@ interface ProcessingConfig {
   };
   use_auto_distribution: boolean;
   total_table_width: string;
+  font_size: 'footnotesize' | 'scriptsize';
 }
 
 interface ApiResponse {
@@ -25,12 +26,13 @@ export default function Home() {
   const [config, setConfig] = useState<ProcessingConfig>({
     excluded_columns: ['B', 'C', 'D', 'E'],
     column_widths: {
-      A: '4.0',
+      A: '6.7',
       B: '4.0',
       C: '2.0'
     },
     use_auto_distribution: false,
-    total_table_width: '15.6'
+    total_table_width: '15.6',
+    font_size: 'footnotesize'
   });
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ApiResponse | null>(null);
@@ -55,6 +57,7 @@ export default function Home() {
     formData.append('file', file);
     formData.append('excluded_columns', JSON.stringify(config.excluded_columns));
     formData.append('column_widths', JSON.stringify(config.column_widths));
+    formData.append('font_size', config.font_size);
     if (config.use_auto_distribution) {
       formData.append('total_table_width', config.total_table_width);
     }
@@ -195,7 +198,7 @@ export default function Home() {
                           min="1"
                           max="10"
                           value={config.column_widths.A}
-                          disabled={config.use_auto_distribution}
+                          disabled={config.use_auto_distribution || config.excluded_columns.includes('A')}
                           onChange={(e) => setConfig(prev => ({
                             ...prev,
                             column_widths: { ...prev.column_widths, A: e.target.value }
@@ -211,7 +214,7 @@ export default function Home() {
                           min="1"
                           max="10"
                           value={config.column_widths.B}
-                          disabled={config.use_auto_distribution}
+                          disabled={config.use_auto_distribution || config.excluded_columns.includes('B')}
                           onChange={(e) => setConfig(prev => ({
                             ...prev,
                             column_widths: { ...prev.column_widths, B: e.target.value }
@@ -260,7 +263,7 @@ export default function Home() {
                     {config.use_auto_distribution && (
                       <div className="bg-purple-500/10 p-4 rounded-lg border border-purple-500/20">
                         <p className="text-xs text-purple-200 mb-3">
-                          Auto-distribution maintains a 2:1 ratio (A & B columns get double width of others)
+                          Auto-distribution maintains a 3:1 ratio (A & B columns get triple width of others)
                         </p>
                         <label className="block text-sm font-medium text-purple-300 mb-2">
                           Total Table Width (cm)
@@ -279,6 +282,54 @@ export default function Home() {
                         />
                       </div>
                     )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-purple-300 mb-3">
+                      Font Size
+                    </label>
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="radio"
+                          id="font-footnotesize"
+                          name="font_size"
+                          value="footnotesize"
+                          checked={config.font_size === 'footnotesize'}
+                          onChange={(e) => setConfig(prev => ({
+                            ...prev,
+                            font_size: e.target.value as 'footnotesize' | 'scriptsize'
+                          }))}
+                          className="text-purple-600 focus:ring-purple-500 bg-slate-700/50"
+                        />
+                        <label htmlFor="font-footnotesize" className="text-sm text-gray-300 cursor-pointer">
+                          Footnote size
+                        </label>
+                        <span className="text-xs text-gray-400">
+                          (9pt - larger)
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="radio"
+                          id="font-scriptsize"
+                          name="font_size"
+                          value="scriptsize"
+                          checked={config.font_size === 'scriptsize'}
+                          onChange={(e) => setConfig(prev => ({
+                            ...prev,
+                            font_size: e.target.value as 'footnotesize' | 'scriptsize'
+                          }))}
+                          className="text-purple-600 focus:ring-purple-500 bg-slate-700/50"
+                        />
+                        <label htmlFor="font-scriptsize" className="text-sm text-gray-300 cursor-pointer">
+                          Script size
+                        </label>
+                        <span className="text-xs text-gray-400">
+                          (7pt - smaller)
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

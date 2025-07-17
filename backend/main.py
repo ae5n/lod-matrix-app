@@ -26,11 +26,12 @@ app.add_middleware(
 class ProcessingConfig(BaseModel):
     excluded_columns: List[str] = ["B", "C", "D", "E"]
     column_widths: dict = {
-        "A": "4.0",
+        "A": "6.7",
         "B": "4.0", 
         "C": "2.0"
     }
     total_table_width: Optional[float] = None
+    font_size: str = "footnotesize"
 
 @app.get("/")
 async def root():
@@ -40,8 +41,9 @@ async def root():
 async def generate_latex(
     file: UploadFile = File(...),
     excluded_columns: str = Form('["B", "C", "D", "E"]'),
-    column_widths: str = Form('{"A": "4.0", "B": "4.0", "C": "2.0"}'),
-    total_table_width: Optional[str] = Form(None)
+    column_widths: str = Form('{"A": "6.7", "B": "4.0", "C": "2.0"}'),
+    total_table_width: Optional[str] = Form(None),
+    font_size: str = Form("footnotesize")
 ):
     try:
         excluded = json.loads(excluded_columns)
@@ -54,13 +56,6 @@ async def generate_latex(
             except ValueError:
                 raise HTTPException(status_code=400, detail="total_table_width must be a valid number")
         
-        print(f"Processing with excluded columns: {excluded}")
-        print(f"Processing with column widths: {widths}")
-        if total_width:
-            print(f"Using auto-distribution with total width: {total_width}cm")
-        else:
-            print("Using manual column widths")
-        
         if not file.filename or not file.filename.endswith(('.xlsx', '.xls')):
             raise HTTPException(status_code=400, detail="Please upload a valid Excel file")
         
@@ -69,7 +64,8 @@ async def generate_latex(
         
         config = {
             "excluded_columns": excluded,
-            "column_widths": widths
+            "column_widths": widths,
+            "font_size": font_size
         }
         
         # Add total_table_width if provided (for auto-distribution)
@@ -77,7 +73,6 @@ async def generate_latex(
             config["total_table_width"] = total_width
         
         latex_files = generator.process_excel(content, config)
-        print(f"Generated {len(latex_files)} files")
         
         if not latex_files:
             raise HTTPException(status_code=400, detail="No LaTeX files could be generated")
